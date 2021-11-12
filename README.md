@@ -138,6 +138,7 @@ def cython_tight_loop():
 
 ### GIL 출시 (Global Interpreter Lock)
 여러 지점에서 특수 기능을 평가해야 하는 경우가 많으며 일반적으로 평가는 거의 병렬화 할 수 있다. Cython 바인딩에는 GIL이 필요하지 않으므로 Cython의 prange 기능을 사용하여 쉽게 병렬로 실행할 수 있다. 예를 들어, Helmholtz 방정식에 대한 기본 솔루션을 계산하려고 한다고 가정한다. 
+
 ![GIL Image](gil1.png)
 
 
