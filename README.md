@@ -105,3 +105,32 @@ csc.sici(x, &si, &ci)
 print(si, ci)
 ```
 
+예제에서 csc.gamma 함수는 numpy배열 대신 C 유형을 인수로 사용하지만 본질적으로 ufunc 대응 감마처럼 작동한다. 특히,  함수는 실수 및 복소수 인수를 지원하도록 오버로드된다는 점에 유의하라. 컴파일 타임에 올바른 변형이 선택된다. 함수 csc.sici는 sici와 약간 다르게 작동한다. ufunc의 경우 ai, bi = sici(x)를 작성할 수 있지만 Cython 버전에서는 여러 반환 값이 포인터로 전달된다. 이것을 출력 배열 sici(x, out=(si, ci))로 ufunc를 호출하는 것과 유사하다고 생각하는 것이 도움이 될 수 있다. 
+
+Cython 바인딩을 사용하면 두 가지 잠재적인 이점이 있다. 
+* 그들은 파이썬 함수 오버 헤드를 피한다. 
+* Python GIL(Global Interpreter Lock)이 필요하지 않다. 
+
+다음 섹션에서는 이러한 이점을 사용하여 잠재적으로 코드 속도를 높이는 방법에 대해 설명한다. 물론 추가 노력을 기울일 가치가 있는지 확인하려면 항상 코드를 먼저 프로파일링해야한다. 
+
+## 파이썬 함수 오버헤드 피하기 
+특별한 ufunc의 경우 벡터화, 즉 함수에 배열을 전달하여 Python 함수 오버헤드를 방지한다. 일반적으로 이 접근 방식은 매우 잘 작동하지만, 예를 들어 고유한 ufunc를 구현할 때 루프 내부의 스칼라 입력에 대해 특수 함수를 호출하는 것이 더 편리한 경우가 있다. 이 경우 파이썬 함수 오버헤드가 커질 수 있다. 다음 예를 고려하라. 
+
+```python 
+import scipy.special as sc 
+cimport scipy.special.cython_special as csc 
+
+def python_tight_loop():
+    cdef:
+        int n
+        double x = 1
+    for n in range(100):
+        sc.jv(n, x)
+def cython_tight_loop():
+    cdef:
+        int n
+        double x = 1
+
+    for n in range(100):
+        csc.jv(n, x)
+```
