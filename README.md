@@ -134,3 +134,41 @@ def cython_tight_loop():
     for n in range(100):
         csc.jv(n, x)
 ```
+한 컴퓨터에서 python_tight_loop는 실행하는데 약 131 마이크로초가 걸렸고 cython_tight_loop는 실행하는데 약 18.2 마이크로초가 걸렸습니다. 분명히 이 예제는 고안된 것입니다. special.jv(np.arange(100), 1)를 호출하면 cython_tight_loop에서와 같이 빠르게 결과를 얻을 수 있습니다. 요점은 코드에서 Python 함수 오버헤드가 중요해지면 Cython 바인딩이 유용할 수 있다. 
+
+### GIL 출시 (Global Interpreter Lock)
+여러 지점에서 특수 기능을 평가해야 하는 경우가 많으며 일반적으로 평가는 거의 병렬화 할 수 있다. Cython 바인딩에는 GIL이 필요하지 않으므로 Cython의 prange 기능을 사용하여 쉽게 병렬로 실행할 수 있다. 예를 들어, Helmholtz 방정식에 대한 기본 솔루션을 계산하려고 한다고 가정한다. 
+![GIL Image](gil1.png)
+
+
+![GIL Image](gil2.png)
+
+
+```python
+from libc.math cimport fabs 
+cimport cython 
+from cython.parallel cimport prange 
+
+import numpy as np
+import scipy.special as sc 
+cimport scipy.special.cython_special as csc 
+
+def serial_G(k, x, y):
+    return 0.25j*sc.hankel1(0, k*np.abs(x - y))
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+
+cdef void _parallel_G(double k, double[:,:] x, double[:, :] y,
+                    double complext[:,:] out) nogil:
+    cdef int i, j
+
+    for i in prange(x.shape[0]):
+        for j in range(y.shape[0]):
+            out[i, j] = 0.25j * csc.hankel1(0, k*fabs(x[i, j] - y[i,j]))
+
+def parallel_G(k, x, y):
+    out = np.empty_like(x,  dtype='complex128')
+    _paralle_G(k, x, y, out)
+    return out
+```
